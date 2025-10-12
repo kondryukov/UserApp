@@ -1,0 +1,2 @@
+CREATE ROLE userapp WITH LOGIN PASSWORD 'password';
+CREATE DATABASE userdb OWNER userapp ENCODING 'UTF8';

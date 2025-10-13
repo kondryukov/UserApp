@@ -3,7 +3,7 @@ package org.example.dao;
 import org.example.domain.User;
 
 public interface UserDao {
-    void create(User user);
+    User create(User user);
     User read(Long id);
     User update(User user);
     void deleteById(Long id);

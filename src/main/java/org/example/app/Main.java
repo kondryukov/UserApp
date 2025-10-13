@@ -76,8 +76,8 @@ public class Main {
         Integer age = readAge(sc);
 
         try {
-            userService.saveUser(name, email, age);
-            System.out.println("User successfully created");
+            User user = userService.saveUser(name, email, age);
+            System.out.println("User " + user + " successfully created");
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("Create failed: {}", e.getMessage());
             System.out.println(e.getMessage());

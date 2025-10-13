@@ -26,7 +26,7 @@ public class UserService {
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
-            log.debug("DB error on saveUser", e);
+            log.error("DB error on saveUser", e);
             throw dbError("creating", e);
         }
     }
@@ -36,11 +36,11 @@ public class UserService {
         }  catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
-            log.debug("DB error on readUser id={}", id, e);
+            log.error("DB error on readUser id={}", id, e);
             throw dbError("reading", e);
         }
     }
-    public void updateUser(Long id, String name, String email, Integer age) {
+    public User updateUser(Long id, String name, String email, Integer age) {
         User user = userDao.read(id);
         if (name != null) user.setName(name);
         if (email != null) {
@@ -51,11 +51,11 @@ public class UserService {
         if (age != null) user.setAge(age);
 
         try {
-            userDao.update(user);
+            return userDao.update(user);
         }  catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
-            log.debug("DB error on updateUser id={}", id, e);
+            log.error("DB error on updateUser id={}", id, e);
             throw dbError("updating", e);
         }
     }
@@ -65,7 +65,7 @@ public class UserService {
         }  catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
-            log.debug("DB error on removeUserById id={}", id, e);
+            log.error("DB error on removeUserById id={}", id, e);
             throw dbError("deleting", e);
         }
     }
@@ -77,7 +77,7 @@ public class UserService {
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
-            log.debug("DB error on removeUserByEmail email={}", email, e);
+            log.error("DB error on removeUserByEmail email={}", email, e);
             throw dbError("deleting", e);
         }
     }

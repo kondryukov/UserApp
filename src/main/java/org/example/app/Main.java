@@ -15,88 +15,40 @@ import static org.example.util.InputUtil.*;
 public class Main {
     private static final Logger log = LogManager.getLogger(Main.class);
 
-
     public static void main(String[] args) {
-        String line, name, email;
-        Long id;
-        Integer age;
         SessionFactory sf = null;
+        String command;
+
         try {
             sf = HibernateUtil.getSessionFactory();
-            UserDaoImpl userDao = new UserDaoImpl(sf);
-            UserService userService = new UserService(userDao);
+            UserService userService = createUserService(sf);
             try (Scanner sc = new Scanner(System.in)) {
-                System.out.println("Commands: create | read | update | delete | exit");
-                while (!(line = sc.nextLine()).equals("exit")) {
-                    switch (line) {
-                        case ("create"):
-                            System.out.println("Enter user name");
-                            name = readStringField(sc);
-                            System.out.println("Enter user email");
-                            email = readStringField(sc);
-                            System.out.println("Enter user age");
-                            age = readAge(sc);
+                printWelcome();
+                command = sc.nextLine();
 
-                            try {
-                                userService.saveUser(name, email, age);
-                                System.out.println("User successfully created");
-                            } catch (IllegalArgumentException | IllegalStateException e) {
-                                log.warn("Create failed: {}", e.getMessage());
-                                System.out.println(e.getMessage());
-                                continue;
-                            }
+                while (!command.equals("exit")) {
+                    switch (command) {
+                        case ("create"):
+                            create(sc, userService);
                             break;
 
                         case ("read"):
-                            System.out.println("Enter user id");
-                            id = readId(sc);
-                            User user;
-                            try {
-                                user = userService.readUser(id);
-                            } catch (IllegalArgumentException | IllegalStateException e) {
-                                log.warn("Read failed: {}", e.getMessage());
-                                System.out.println(e.getMessage());
-                                continue;
-                            }
-                            System.out.println("User by your id: " + user);
+                            read(sc, userService);
                             break;
 
                         case ("update"):
-                            System.out.println("Enter user id");
-                            id = readId(sc);
-                            System.out.println("Enter new name (optional)");
-                            name = readStringFieldNull(sc);
-                            System.out.println("Enter new age (optional)");
-                            age = readAgeNull(sc);
-                            System.out.println("Enter new email (optional)");
-                            email = readStringFieldNull(sc);
-
-                            try {
-                                userService.updateUser(id, name, email, age);
-                                System.out.println("Updated user: " + userService.readUser(id));
-                            } catch (IllegalArgumentException | IllegalStateException ex) {
-                                log.warn("Update failed: {}", ex.getMessage());
-                                System.out.println(ex.getMessage());
-                            }
+                            update(sc, userService);
                             break;
 
                         case ("delete"):
-                            System.out.println("Enter user id");
-                            id = readId(sc);
-
-                            try {
-                                userService.removeUserById(id);
-                                System.out.println("Deleted (if existed).");
-                            } catch (IllegalArgumentException | IllegalStateException ex) {
-                                log.warn("Delete failed: {}", ex.getMessage());
-                                System.out.println(ex.getMessage());
-                            }
+                            delete(sc, userService);
                             break;
 
                         default:
-                            System.out.println("Unknown command. Use: create | read | update | delete | exit");
+                            printUnknownCommand();
                             break;
                     }
+                    command = sc.nextLine();
                 }
             }
             log.info("Exiting normally.");
@@ -104,14 +56,83 @@ public class Main {
             log.fatal("Fatal error during startup/run. Exiting with code 1.", t);
             System.exit(1);
         } finally {
-            if (sf != null) {
-                try {
-                    sf.close();
-                } catch (Exception e) {
-                    log.warn("Error closing SessionFactory", e);
-                }
-            }
+            closeSessionFactory(sf);
             log.info("Shutdown complete.");
+        }
+    }
+    private static UserService createUserService(SessionFactory sf) {
+        UserDaoImpl userDao = new UserDaoImpl(sf);
+        return new UserService(userDao);
+    }
+    private static void printWelcome() {
+        System.out.println("Commands: create | read | update | delete | exit");
+    }
+    private static void create(Scanner sc, UserService userService) {
+        System.out.println("Enter user name");
+        String name = readStringField(sc);
+        System.out.println("Enter user email");
+        String email = readStringField(sc);
+        System.out.println("Enter user age");
+        Integer age = readAge(sc);
+
+        try {
+            userService.saveUser(name, email, age);
+            System.out.println("User successfully created");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Create failed: {}", e.getMessage());
+            System.out.println(e.getMessage());
+        }
+    }
+    private static void read(Scanner sc, UserService userService) {
+        System.out.println("Enter user id");
+        Long id = readId(sc);
+        try {
+            User user = userService.readUser(id);
+            System.out.println("User by your id: " + user);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Read failed: {}", e.getMessage());
+            System.out.println(e.getMessage());
+            System.out.println("Try again");
+        }
+    }
+    private static void update(Scanner sc, UserService userService) {
+        System.out.println("Enter user id");
+        Long id = readId(sc);
+        System.out.println("Enter new name (optional)");
+        String name = readStringFieldNull(sc);
+        System.out.println("Enter new age (optional)");
+        Integer age = readAgeNull(sc);
+        System.out.println("Enter new email (optional)");
+        String email = readStringFieldNull(sc);
+        try {
+            User user = userService.updateUser(id, name, email, age);
+            System.out.println("Updated user: " + user);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            log.warn("Update failed: {}", ex.getMessage());
+            System.out.println(ex.getMessage());
+        }
+    }
+    private static void delete(Scanner sc, UserService userService) {
+        System.out.println("Enter user id");
+        Long id = readId(sc);
+        try {
+            userService.removeUserById(id);
+            System.out.println("User deleted.");
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            log.warn("Delete failed: {}", ex.getMessage());
+            System.out.println(ex.getMessage());
+        }
+    }
+    private static void printUnknownCommand() {
+        System.out.println("Unknown command. Use: create | read | update | delete | exit");
+    }
+    private static void closeSessionFactory(SessionFactory sf) {
+        if (sf != null) {
+            try {
+                sf.close();
+            } catch (Exception e) {
+                log.warn("Error closing SessionFactory", e);
+            }
         }
     }
 }

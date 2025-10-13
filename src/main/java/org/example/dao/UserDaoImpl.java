@@ -15,13 +15,14 @@ public class UserDaoImpl implements UserDao {
         this.sessionFactory = sessionFactory;
     }
     @Override
-    public void create(User user) {
+    public User create(User user) {
         Transaction transaction = null;
         try (Session session = sessionFactory.openSession()) {
             transaction = session.beginTransaction();
             session.persist(user);
-            log.info("User created {}", user);
             transaction.commit();
+            log.info("User created {}", user);
+            return user;
         } catch (ConstraintViolationException e) {
             handleConstraintViolation(e);
         } catch (JDBCException e) {
@@ -32,6 +33,7 @@ public class UserDaoImpl implements UserDao {
         } finally {
             safeRollback(transaction);
         }
+        return null;
     }
     @Override
     public User read(Long id) {

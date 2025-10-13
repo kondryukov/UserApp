@@ -17,12 +17,13 @@ public class UserService {
     public UserService(UserDaoImpl userDao) {
         this.userDao = userDao;
     }
-    public void saveUser(String name, String email, Integer age) {
+    public User saveUser(String name, String email, Integer age) {
         try {
             email = email.trim().toLowerCase();
             mailValidAndUnique(email);
             User user = new User(name, email, age);
             userDao.create(user);
+            return user;
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {

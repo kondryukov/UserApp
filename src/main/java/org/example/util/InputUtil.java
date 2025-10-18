@@ -3,11 +3,12 @@ package org.example.util;
 import java.util.Scanner;
 
 public final class InputUtil {
-    private InputUtil() {}
+    private InputUtil() {
+    }
 
     public static Long readId(Scanner sc) {
         long id;
-        while(true){
+        while (true) {
             try {
                 id = Long.parseLong(sc.nextLine());
                 break;
@@ -20,7 +21,7 @@ public final class InputUtil {
 
     public static Integer readAge(Scanner sc) {
         int age = -1;
-        while(age < 0){
+        while (age < 0) {
             try {
                 age = Integer.parseInt(sc.nextLine());
             } catch (NumberFormatException ignored) {
@@ -47,8 +48,8 @@ public final class InputUtil {
 
     public static String readStringField(Scanner sc) {
         String line;
-        while((line = sc.nextLine()).trim().isEmpty()) {
-            System.out.println("Field name shouldn't by empty");
+        while ((line = sc.nextLine()).trim().isEmpty()) {
+            System.out.println("Field name shouldn't be empty");
         }
         return line;
     }

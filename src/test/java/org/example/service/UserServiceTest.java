@@ -4,6 +4,8 @@ import org.example.dao.UserDaoImpl;
 import org.example.domain.User;
 import org.example.dao.UserDao;
 
+import org.hibernate.HibernateException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,62 +19,75 @@ import static org.mockito.Mockito.*;
 class UserServiceTest {
     UserDao userDao;
     UserService service;
+
     @BeforeEach
     void setUp() {
         userDao = mock(UserDaoImpl.class);
-        service = mock(UserService.class);
         service = new UserService((UserDaoImpl) userDao);
     }
+
     @Test
-    void saveUser_ok_normalizesEmail_and_callsDao() {
-        when(userDao.mailUniqueCheck("a@b.com")).thenReturn(true);
-
-        service.saveUser("Alice", "  A@B.COM  ", 30);
-
-        ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
-        verify(userDao).create(cap.capture());
-        User u = cap.getValue();
-
-        assertThat(u.getName()).isEqualTo("Alice");
-        assertThat(u.getEmail()).isEqualTo("a@b.com");
-        assertThat(u.getAge()).isEqualTo(30);
+    void saveUserTest() {
+        when(userDao.mailUniqueCheck("asdf@mail.ru")).thenReturn(true);
+        User u = service.saveUser("name", "asdf@mail.ru", 12);
+        assertThat(u.getName()).isEqualTo("name");
+        assertThat(u.getEmail()).isEqualTo("asdf@mail.ru");
+        assertThat(u.getAge()).isEqualTo(12);
     }
+
     @Test
-    void saveUser_blankEmail_throws() {
-        try {
-            service.saveUser("Alice", "   ", 20);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage()).contains("Not valid email");
-            verifyNoInteractions(userDao);
-        }
+    void saveUserDuplicateEmailTest() {
+        when(userDao.mailUniqueCheck("asdf@mail.ru")).thenReturn(false);
+        Assertions.assertThrows(IllegalArgumentException.class, () -> service.saveUser("name", "asdf@mail.ru", 12));
     }
-    @Test
-    void saveUser_duplicateEmail_throws() {
-        when(userDao.mailUniqueCheck("dupe@ex.com")).thenReturn(false);
 
-        try {
-            service.saveUser("Bob", "dupe@ex.com", 20);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage()).contains("already");
-            verify(userDao, never()).create(any());
-        }
+    @Test
+    void saveUserIllegalArgumentExceptionTest() {
+        when(userDao.mailUniqueCheck("asdf@mail.ru")).thenReturn(true);
+        when(userDao.create(any())).thenThrow(IllegalStateException.class);
+        Assertions.assertThrows(IllegalStateException.class, () -> service.saveUser("name", "asdf@mail.ru", 12));
     }
+
+    @Test
+    void saveUserHibernateExceptionTest() {
+        when(userDao.mailUniqueCheck("asdf@mail.ru")).thenReturn(true);
+        when(userDao.create(any(User.class))).thenThrow(new HibernateException("Hibernate exception"));
+        IllegalStateException exception = Assertions.assertThrows(IllegalStateException.class, () -> service.saveUser("name", "asdf@mail.ru", 12));
+        Assertions.assertNotNull(exception.getCause());
+        Assertions.assertTrue(exception.getCause() instanceof HibernateException);
+    }
+
+    @Test
+    void saveUserInvalidEmailThrows() {
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.saveUser("name", "exampleOfInvalidEmail", 12));
+        verify(userDao, never()).create(any());
+    }
+
+    @Test
+    void saveUserNormalizedEmail() {
+        when(userDao.mailUniqueCheck("asdf@mail.ru")).thenReturn(true);
+        User u = service.saveUser("name", "ASDF@mail.ru", 12);
+        assertThat(u.getName()).isEqualTo("name");
+        assertThat(u.getEmail()).isEqualTo("asdf@mail.ru");
+        assertThat(u.getAge()).isEqualTo(12);
+    }
+
+    @Test
+    void saveUserWithoutEmailTest() {
+        Assertions.assertThrows(IllegalArgumentException.class, () -> service.saveUser("name", "", 12));
+    }
+
     @Test
     void updateUser_changesOnlyProvidedFields_andChecksEmailUniq() {
         User existing = new User("Old", "old@ex.com", 25);
         existing.setId(2L);
-
         when(userDao.read(2L)).thenReturn(existing);
         when(userDao.mailUniqueCheck("new@ex.com")).thenReturn(true);
-
         service.updateUser(2L, "New", "new@ex.com", 26);
-
         ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
         verify(userDao).update(cap.capture());
         User u = cap.getValue();
-
         assertThat(u.getId()).isEqualTo(2L);
         assertThat(u.getName()).isEqualTo("New");
         assertThat(u.getEmail()).isEqualTo("new@ex.com");

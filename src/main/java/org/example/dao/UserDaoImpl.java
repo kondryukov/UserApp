@@ -11,9 +11,11 @@ import java.sql.SQLException;
 public class UserDaoImpl implements UserDao {
     private static final Logger log = LogManager.getLogger(UserDaoImpl.class);
     private final SessionFactory sessionFactory;
+
     public UserDaoImpl(SessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory;
     }
+
     @Override
     public User create(User user) {
         Transaction transaction = null;
@@ -35,6 +37,7 @@ public class UserDaoImpl implements UserDao {
         }
         return null;
     }
+
     @Override
     public User read(Long id) {
         Transaction transaction = null;
@@ -51,7 +54,7 @@ public class UserDaoImpl implements UserDao {
             }
             transaction.commit();
             return user;
-        }  catch (ConstraintViolationException e) {
+        } catch (ConstraintViolationException e) {
             handleConstraintViolation(e);
         } catch (JDBCException e) {
             handleJdbcException("read", e);
@@ -63,7 +66,6 @@ public class UserDaoImpl implements UserDao {
         }
         return null;
     }
-
 
 
     @Override
@@ -87,6 +89,7 @@ public class UserDaoImpl implements UserDao {
         }
         return null;
     }
+
     @Override
     public void deleteById(Long id) {
         Transaction transaction = null;
@@ -113,6 +116,7 @@ public class UserDaoImpl implements UserDao {
             safeRollback(transaction);
         }
     }
+
     @Override
     public void deleteByEmail(String email) {
         Transaction transaction = null;
@@ -141,6 +145,7 @@ public class UserDaoImpl implements UserDao {
             safeRollback(transaction);
         }
     }
+
     public boolean mailUniqueCheck(String email) {
         Transaction transaction = null;
         try (Session session = sessionFactory.openSession()) {
@@ -158,7 +163,7 @@ public class UserDaoImpl implements UserDao {
             }
             transaction.commit();
             return search == null;
-        }  catch (ConstraintViolationException e) {
+        } catch (ConstraintViolationException e) {
             handleConstraintViolation(e);
             throw e;
         } catch (JDBCException e) {
@@ -171,6 +176,7 @@ public class UserDaoImpl implements UserDao {
             safeRollback(transaction);
         }
     }
+
     private void safeRollback(Transaction transaction) {
         try {
             if (transaction != null && transaction.getStatus().canRollback()) {
@@ -181,6 +187,7 @@ public class UserDaoImpl implements UserDao {
             log.warn("Error in transaction rollback", re);
         }
     }
+
     private void handleConstraintViolation(ConstraintViolationException e) {
         SQLException sqlException = e.getSQLException();
         String state = sqlException != null ? sqlException.getSQLState() : null;
@@ -196,6 +203,7 @@ public class UserDaoImpl implements UserDao {
             throw new IllegalStateException("Constraint violation in db");
         }
     }
+
     private void handleJdbcException(String operation, JDBCException exception) {
         SQLException sqlException = exception.getSQLException();
         String state = sqlException != null ? sqlException.getSQLState() : null;
@@ -208,6 +216,7 @@ public class UserDaoImpl implements UserDao {
         log.error("JDBCException в {} (SQLState={}): {}", operation, state, safeSqlMessage(sqlException), exception);
         throw exception;
     }
+
     private String safeSqlMessage(SQLException exception) {
         return exception == null ? "<no-sql-exception>" : exception.getMessage();
     }

@@ -18,6 +18,7 @@ public class Main {
     public static void main(String[] args) {
         SessionFactory sf = null;
         String command;
+        System.out.println("hello how are you?");
         try {
             sf = HibernateUtil.getSessionFactory();
             UserService userService = createUserService(sf);

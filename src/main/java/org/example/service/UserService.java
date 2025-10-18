@@ -8,15 +8,18 @@ import org.apache.logging.log4j.Logger;
 import org.example.dao.UserDaoImpl;
 import org.example.domain.User;
 import org.hibernate.*;
+
 import java.util.Set;
 
 public class UserService {
     private static final Logger log = LogManager.getLogger(UserService.class);
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     private final UserDaoImpl userDao;
+
     public UserService(UserDaoImpl userDao) {
         this.userDao = userDao;
     }
+
     public User saveUser(String name, String email, Integer age) {
         try {
             email = email.trim().toLowerCase();
@@ -31,16 +34,18 @@ public class UserService {
             throw dbError("creating", e);
         }
     }
+
     public User readUser(Long id) {
         try {
             return userDao.read(id);
-        }  catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
             log.error("DB error on readUser id={}", id, e);
             throw dbError("reading", e);
         }
     }
+
     public User updateUser(Long id, String name, String email, Integer age) {
         User user = userDao.read(id);
         if (name != null) user.setName(name);
@@ -53,23 +58,25 @@ public class UserService {
 
         try {
             return userDao.update(user);
-        }  catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
             log.error("DB error on updateUser id={}", id, e);
             throw dbError("updating", e);
         }
     }
+
     public void removeUserById(Long id) {
         try {
             userDao.deleteById(id);
-        }  catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
             log.error("DB error on removeUserById id={}", id, e);
             throw dbError("deleting", e);
         }
     }
+
     public void removeUserByEmail(String email) {
         try {
             email = email.trim().toLowerCase();
@@ -82,6 +89,7 @@ public class UserService {
             throw dbError("deleting", e);
         }
     }
+
     public void mailValid(String email) {
         String normalizedEmail = email.trim().toLowerCase();
         Set<ConstraintViolation<User>> v =
@@ -93,6 +101,7 @@ public class UserService {
             throw new IllegalArgumentException("User with " + email + " already created");
         }
     }
+
     public void mailValidAndUnique(String email) {
         String normalizedEmail = email.trim().toLowerCase();
         Set<ConstraintViolation<User>> v =

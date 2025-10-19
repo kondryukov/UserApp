@@ -11,7 +11,6 @@ public final class HibernateUtil {
     private static final Logger log = LogManager.getLogger(HibernateUtil.class);
 
     static {
-
         try {
             log.info("Initialisation SessionFactory...");
             StandardServiceRegistry registry = new org.hibernate.boot.registry.StandardServiceRegistryBuilder()
@@ -22,7 +21,7 @@ public final class HibernateUtil {
                     .buildMetadata()
                     .buildSessionFactory();
             log.info("SessionFactory successfully created.");
-        } catch (Throwable ex) {
+        } catch (RuntimeException ex) {
             LogManager.getLogger(HibernateUtil.class)
                     .fatal("Initialisation of SessionFactory is failed", ex);
             throw new ExceptionInInitializerError(ex);

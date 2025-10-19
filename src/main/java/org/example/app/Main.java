@@ -18,7 +18,6 @@ public class Main {
     public static void main(String[] args) {
         SessionFactory sf = null;
         String command;
-        System.out.println("hello how are you?");
         try {
             sf = HibernateUtil.getSessionFactory();
             UserService userService = createUserService(sf);
@@ -60,13 +59,16 @@ public class Main {
             log.info("Shutdown complete.");
         }
     }
+
     private static UserService createUserService(SessionFactory sf) {
         UserDaoImpl userDao = new UserDaoImpl(sf);
         return new UserService(userDao);
     }
+
     private static void printWelcome() {
         System.out.println("Commands: create | read | update | delete | exit");
     }
+
     private static void create(Scanner sc, UserService userService) {
         System.out.println("Enter user name");
         String name = readStringField(sc);
@@ -83,6 +85,7 @@ public class Main {
             System.out.println(e.getMessage());
         }
     }
+
     private static void read(Scanner sc, UserService userService) {
         System.out.println("Enter user id");
         Long id = readId(sc);
@@ -95,6 +98,7 @@ public class Main {
             System.out.println("Try again");
         }
     }
+
     private static void update(Scanner sc, UserService userService) {
         System.out.println("Enter user id");
         Long id = readId(sc);
@@ -112,6 +116,7 @@ public class Main {
             System.out.println(ex.getMessage());
         }
     }
+
     private static void delete(Scanner sc, UserService userService) {
         System.out.println("Enter user id");
         Long id = readId(sc);
@@ -123,9 +128,11 @@ public class Main {
             System.out.println(ex.getMessage());
         }
     }
+
     private static void printUnknownCommand() {
         System.out.println("Unknown command. Use: create | read | update | delete | exit");
     }
+
     private static void closeSessionFactory(SessionFactory sf) {
         if (sf != null) {
             try {

@@ -47,7 +47,16 @@ public class UserService {
     }
 
     public User updateUser(Long id, String name, String email, Integer age) {
-        User user = userDao.read(id);
+        User user;
+        try {
+            user = userDao.read(id);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
+        } catch (HibernateException e) {
+            log.error("DB error on updateUser id={}", id, e);
+            throw dbError("updating", e);
+        }
+
         if (name != null) user.setName(name);
         if (email != null) {
             email = email.trim().toLowerCase();
@@ -92,23 +101,15 @@ public class UserService {
 
     public void mailValid(String email) {
         String normalizedEmail = email.trim().toLowerCase();
-        Set<ConstraintViolation<User>> v =
-                validator.validateValue(User.class, "email", normalizedEmail);
+        Set<ConstraintViolation<User>> v = validator.validateValue(User.class, "email", normalizedEmail);
         if (!v.isEmpty()) {
             throw new IllegalArgumentException("Not valid email");
-        }
-        if (!userDao.mailUniqueCheck(normalizedEmail)) {
-            throw new IllegalArgumentException("User with " + email + " already created");
         }
     }
 
     public void mailValidAndUnique(String email) {
         String normalizedEmail = email.trim().toLowerCase();
-        Set<ConstraintViolation<User>> v =
-                validator.validateValue(User.class, "email", normalizedEmail);
-        if (!v.isEmpty()) {
-            throw new IllegalArgumentException("Not valid email");
-        }
+        mailValid(normalizedEmail);
         if (!userDao.mailUniqueCheck(normalizedEmail)) {
             throw new IllegalArgumentException("User with " + email + " already created");
         }

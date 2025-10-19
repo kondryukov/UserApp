@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.example.domain.User;
 import org.hibernate.*;
 import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.resource.transaction.spi.TransactionStatus;
 
 import java.sql.SQLException;
 
@@ -48,7 +49,7 @@ public class UserDaoImpl implements UserDao {
             if (user == null) {
                 log.info("User with id={} not existed", id);
                 transaction.commit();
-                throw new IllegalArgumentException("User with id={} is not existed");
+                throw new IllegalArgumentException("User with id={" + id + "} is not existed");
             } else {
                 log.debug("User is load: {}", user);
             }
@@ -105,8 +106,6 @@ public class UserDaoImpl implements UserDao {
                 transaction.commit();
                 log.info("User {} is deleted", user);
             }
-        } catch (ConstraintViolationException e) {
-            handleConstraintViolation(e);
         } catch (JDBCException e) {
             handleJdbcException("deleteById", e);
         } catch (HibernateException e) {
@@ -122,11 +121,7 @@ public class UserDaoImpl implements UserDao {
         Transaction transaction = null;
         try (Session session = sessionFactory.openSession()) {
             transaction = session.beginTransaction();
-            User user = session.createQuery(
-                            "from User u where lower(u.email) = :e", User.class)
-                    .setParameter("e", email)
-                    .setMaxResults(1)
-                    .uniqueResult();
+            User user = session.createQuery("from User u where lower(u.email) = :e", User.class).setParameter("e", email).setMaxResults(1).uniqueResult();
             if (user == null) {
                 log.info("User with email={} is not existed", email);
             } else {
@@ -134,8 +129,6 @@ public class UserDaoImpl implements UserDao {
                 transaction.commit();
                 log.info("User {} is deleted", user);
             }
-        } catch (ConstraintViolationException e) {
-            handleConstraintViolation(e);
         } catch (JDBCException e) {
             handleJdbcException("deleteByEmail", e);
         } catch (HibernateException e) {
@@ -151,11 +144,7 @@ public class UserDaoImpl implements UserDao {
         try (Session session = sessionFactory.openSession()) {
             session.setDefaultReadOnly(true);
             transaction = session.beginTransaction();
-            Integer search = session.createQuery(
-                            "select 1 from User u where lower(u.email) = :e", Integer.class)
-                    .setParameter("e", email.trim().toLowerCase())
-                    .setMaxResults(1)
-                    .uniqueResult();
+            Integer search = session.createQuery("select 1 from User u where lower(u.email) = :e", Integer.class).setParameter("e", email.trim().toLowerCase()).setMaxResults(1).uniqueResult();
             if (search == null) {
                 log.info("User with mail={} not existed", email);
             } else {
@@ -163,9 +152,6 @@ public class UserDaoImpl implements UserDao {
             }
             transaction.commit();
             return search == null;
-        } catch (ConstraintViolationException e) {
-            handleConstraintViolation(e);
-            throw e;
         } catch (JDBCException e) {
             handleJdbcException("mailUniqueCheck", e);
             throw e;
@@ -178,8 +164,10 @@ public class UserDaoImpl implements UserDao {
     }
 
     private void safeRollback(Transaction transaction) {
+        if (transaction == null) return;
         try {
-            if (transaction != null && transaction.getStatus().canRollback()) {
+            TransactionStatus status = transaction.getStatus();
+            if (status == TransactionStatus.ACTIVE || status == TransactionStatus.MARKED_ROLLBACK) {
                 transaction.rollback();
                 log.debug("Transaction rollback");
             }
@@ -214,7 +202,7 @@ public class UserDaoImpl implements UserDao {
         }
 
         log.error("JDBCException в {} (SQLState={}): {}", operation, state, safeSqlMessage(sqlException), exception);
-        throw exception;
+        throw new IllegalStateException("Database error while creating user", exception);
     }
 
     private String safeSqlMessage(SQLException exception) {

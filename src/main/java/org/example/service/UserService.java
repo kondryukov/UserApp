@@ -53,7 +53,7 @@ public class UserService {
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (HibernateException e) {
-            log.error("DB error on updateUser id={}", id, e);
+            log.error("DB error on updateUser(readUser) id={}", id, e);
             throw dbError("updating", e);
         }
 

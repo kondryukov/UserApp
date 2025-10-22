@@ -55,17 +55,12 @@ public class UserDaoImpl implements UserDao {
             }
             transaction.commit();
             return user;
-        } catch (ConstraintViolationException e) {
-            handleConstraintViolation(e);
-        } catch (JDBCException e) {
-            handleJdbcException("read", e);
         } catch (HibernateException e) {
             log.error("Hibernate error in read(id={})", id, e);
             throw e;
         } finally {
             safeRollback(transaction);
         }
-        return null;
     }
 
 
@@ -106,8 +101,6 @@ public class UserDaoImpl implements UserDao {
                 transaction.commit();
                 log.info("User {} is deleted", user);
             }
-        } catch (JDBCException e) {
-            handleJdbcException("deleteById", e);
         } catch (HibernateException e) {
             log.error("Hibernate error in deleteById(id={})", id, e);
             throw e;
@@ -124,13 +117,12 @@ public class UserDaoImpl implements UserDao {
             User user = session.createQuery("from User u where lower(u.email) = :e", User.class).setParameter("e", email).setMaxResults(1).uniqueResult();
             if (user == null) {
                 log.info("User with email={} is not existed", email);
+                throw new IllegalArgumentException("User with email={" + email + "} is not existed");
             } else {
                 session.remove(user);
                 transaction.commit();
                 log.info("User {} is deleted", user);
             }
-        } catch (JDBCException e) {
-            handleJdbcException("deleteByEmail", e);
         } catch (HibernateException e) {
             log.error("Hibernate error in deleteByEmail(email={})", email, e);
             throw e;
@@ -144,7 +136,9 @@ public class UserDaoImpl implements UserDao {
         try (Session session = sessionFactory.openSession()) {
             session.setDefaultReadOnly(true);
             transaction = session.beginTransaction();
-            Integer search = session.createQuery("select 1 from User u where lower(u.email) = :e", Integer.class).setParameter("e", email.trim().toLowerCase()).setMaxResults(1).uniqueResult();
+            Integer search = session.createQuery("select 1 from User u where lower(u.email) = :e", Integer.class)
+                    .setParameter("e", email.trim().toLowerCase())
+                    .setMaxResults(1).uniqueResult();
             if (search == null) {
                 log.info("User with mail={} not existed", email);
             } else {
@@ -152,10 +146,7 @@ public class UserDaoImpl implements UserDao {
             }
             transaction.commit();
             return search == null;
-        } catch (JDBCException e) {
-            handleJdbcException("mailUniqueCheck", e);
-            throw e;
-        } catch (HibernateException e) {
+        }  catch (HibernateException e) {
             log.error("Hibernate error in mailUniqueCheck(email={})", email, e);
             throw e;
         } finally {
@@ -168,8 +159,8 @@ public class UserDaoImpl implements UserDao {
         try {
             TransactionStatus status = transaction.getStatus();
             if (status == TransactionStatus.ACTIVE || status == TransactionStatus.MARKED_ROLLBACK) {
-                transaction.rollback();
                 log.debug("Transaction rollback");
+                transaction.rollback();
             }
         } catch (RuntimeException re) {
             log.warn("Error in transaction rollback", re);
@@ -192,17 +183,12 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    private void handleJdbcException(String operation, JDBCException exception) {
+    public void handleJdbcException(String operation, JDBCException exception) {
         SQLException sqlException = exception.getSQLException();
         String state = sqlException != null ? sqlException.getSQLState() : null;
 
-        if ("22P02".equals(state)) {
-            log.info("Wrong data (22P02) в {}: {}", operation, safeSqlMessage(sqlException));
-            throw new IllegalArgumentException("Wrong data");
-        }
-
         log.error("JDBCException в {} (SQLState={}): {}", operation, state, safeSqlMessage(sqlException), exception);
-        throw new IllegalStateException("Database error while creating user", exception);
+        throw new IllegalStateException("Database error while " + operation + " user", exception);
     }
 
     private String safeSqlMessage(SQLException exception) {

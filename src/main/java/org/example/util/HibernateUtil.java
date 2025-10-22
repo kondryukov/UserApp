@@ -2,7 +2,6 @@ package org.example.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.example.domain.User;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.SessionFactory;
 
@@ -17,13 +16,12 @@ public final class HibernateUtil {
                     .configure()
                     .build();
             SESSION_FACTORY = new org.hibernate.boot.MetadataSources(registry)
-                    .addAnnotatedClass(User.class)
+                    .addAnnotatedClass(org.example.domain.User.class)
                     .buildMetadata()
                     .buildSessionFactory();
             log.info("SessionFactory successfully created.");
         } catch (RuntimeException ex) {
-            LogManager.getLogger(HibernateUtil.class)
-                    .fatal("Initialisation of SessionFactory is failed", ex);
+            LogManager.getLogger(HibernateUtil.class).fatal("Initialisation of SessionFactory is failed", ex);
             throw new ExceptionInInitializerError(ex);
         }
     }

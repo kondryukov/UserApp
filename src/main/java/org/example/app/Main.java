@@ -17,59 +17,65 @@ public class Main {
 
     public static void main(String[] args) {
         SessionFactory sf = null;
-        String command;
         try {
             sf = HibernateUtil.getSessionFactory();
-            UserService userService = createUserService(sf);
+            UserDaoImpl userDao = new UserDaoImpl(sf);
+            UserService userService = new UserService(userDao);
             try (Scanner sc = new Scanner(System.in)) {
-                printWelcome();
-                command = sc.nextLine();
-
-                while (!command.equals("exit")) {
-                    switch (command) {
-                        case ("create"):
-                            create(sc, userService);
-                            break;
-
-                        case ("read"):
-                            read(sc, userService);
-                            break;
-
-                        case ("update"):
-                            update(sc, userService);
-                            break;
-
-                        case ("delete"):
-                            delete(sc, userService);
-                            break;
-
-                        default:
-                            printUnknownCommand();
-                            break;
-                    }
-                    command = sc.nextLine();
-                }
+                run(userService, sc);
             }
             log.info("Exiting normally.");
-        } catch (Throwable t) {
+        } catch (RuntimeException t) {
             log.fatal("Fatal error during startup/run. Exiting with code 1.", t);
             System.exit(1);
         } finally {
-            closeSessionFactory(sf);
+            if (sf != null) {
+                try {
+                    sf.close();
+                    log.info("SessionFactory is closed");
+                } catch (Exception e) {
+                    log.warn("Error closing SessionFactory", e);
+                    System.out.println("Error closing SessionFactory");
+                }
+            }
             log.info("Shutdown complete.");
         }
     }
 
-    private static UserService createUserService(SessionFactory sf) {
-        UserDaoImpl userDao = new UserDaoImpl(sf);
-        return new UserService(userDao);
+    public static void run(UserService userService, Scanner sc) {
+        printWelcome();
+        String command = sc.nextLine();
+
+        while (!command.equals("exit")) {
+            switch (command) {
+                case ("create"):
+                    create(sc, userService);
+                    break;
+
+                case ("read"):
+                    read(sc, userService);
+                    break;
+
+                case ("update"):
+                    update(sc, userService);
+                    break;
+
+                case ("delete"):
+                    delete(sc, userService);
+                    break;
+
+                default:
+                    printUnknownCommand();
+            }
+            command = sc.nextLine();
+        }
     }
 
     private static void printWelcome() {
         System.out.println("Commands: create | read | update | delete | exit");
     }
 
-    private static void create(Scanner sc, UserService userService) {
+    public static void create(Scanner sc, UserService userService) {
         System.out.println("Enter user name");
         String name = readStringField(sc);
         System.out.println("Enter user email");
@@ -82,11 +88,11 @@ public class Main {
             System.out.println("User " + user + " successfully created");
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("Create failed: {}", e.getMessage());
-            System.out.println(e.getMessage());
+            System.out.println("Error message: " + e.getMessage());
         }
     }
 
-    private static void read(Scanner sc, UserService userService) {
+    public static void read(Scanner sc, UserService userService) {
         System.out.println("Enter user id");
         Long id = readId(sc);
         try {
@@ -125,21 +131,11 @@ public class Main {
             System.out.println("User deleted.");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             log.warn("Delete failed: {}", ex.getMessage());
-            System.out.println(ex.getMessage());
+            System.out.println("Error while deleting " + ex.getMessage());
         }
     }
 
     private static void printUnknownCommand() {
         System.out.println("Unknown command. Use: create | read | update | delete | exit");
-    }
-
-    private static void closeSessionFactory(SessionFactory sf) {
-        if (sf != null) {
-            try {
-                sf.close();
-            } catch (Exception e) {
-                log.warn("Error closing SessionFactory", e);
-            }
-        }
     }
 }

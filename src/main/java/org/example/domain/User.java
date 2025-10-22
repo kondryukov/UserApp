@@ -75,31 +75,7 @@ public class User {
         this.age = age;
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Date updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public User() {
-    }
-
-    public User(String name, String email, Integer age, Date createdAt) {
-        this.name = name;
-        this.email = email;
-        this.age = age;
-        this.createdAt = createdAt;
-    }
+    public User() {}
 
     public User(String name, String email, Integer age) {
         this.name = name;

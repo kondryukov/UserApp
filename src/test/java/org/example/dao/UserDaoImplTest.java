@@ -113,7 +113,7 @@ class UserDaoImplTest {
         IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> userDao.create(user));
 
-        assertEquals("Database error while creating user", exception.getMessage());
+        assertEquals("Database error while create user", exception.getMessage());
     }
 
     @Test
@@ -145,7 +145,59 @@ class UserDaoImplTest {
                 () -> userDao.update(updated));
 
         assertEquals("That email is already used", exception.getMessage());
+    }
 
+    @Test
+    void updateEmptyEmail() {
+        userDao.create(new User("old", "old@mail.ru", 12));
+        User updated = userDao.create(new User("new", "new@mail.ru", 123));
+        updated.setEmail(null);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userDao.update(updated));
+
+        assertEquals("That field can't be empty", exception.getMessage());
+    }
+
+    @Test
+    void updateLongEmailJDBCException() {
+        String sb = "mail".repeat(100) + "@mail.ru";
+        User user = new User("name", "mail@mail.ru", 20);
+        user.setEmail(sb);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> userDao.update(user));
+
+        assertEquals("Database error while update user", exception.getMessage());
+    }
+
+    @Test
+    void createConstraintException() {
+        try (Session s = sessionFactory.openSession()) {
+            s.beginTransaction();
+            s.createNativeMutationQuery("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_age_check").executeUpdate();
+            s.createNativeMutationQuery(
+                    "ALTER TABLE users ADD CONSTRAINT users_age_check CHECK (age BETWEEN 0 AND 120)"
+            ).executeUpdate();
+            s.getTransaction().commit();
+        }
+        try {
+            IllegalStateException exception = assertThrows(IllegalStateException.class,
+                    () -> userDao.create(new User("name", "mail@mail.ru", 1234)));
+            assertEquals("Constraint violation in db", exception.getMessage());
+        } finally {
+            try (Session s = sessionFactory.openSession()) {
+                s.beginTransaction();
+                s.createNativeMutationQuery("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_age_check").executeUpdate();
+                s.getTransaction().commit();
+            }
+        }
+    }
+
+    @Test
+    void createNullUser() {
+        assertThrows(IllegalArgumentException.class,
+                () -> userDao.create(null));
     }
 
     @Test
@@ -168,6 +220,7 @@ class UserDaoImplTest {
                 () -> userDao.deleteById(123L));
 
         assertEquals("User with id={123} is not existed", exception.getMessage());
+
     }
 
     @Test
@@ -185,6 +238,15 @@ class UserDaoImplTest {
     }
 
     @Test
+    void deleteByNotExistedEmail() {
+        userDao.create(new User("name", "name@mail.ru", 12));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userDao.deleteByEmail("wrong@mail.ru"));
+
+        assertEquals("User with email={wrong@mail.ru} is not existed", exception.getMessage());
+    }
+
+    @Test
     void mailUniqueCheck() {
         assertThat(userDao.mailUniqueCheck("mail@mail.ru")).isTrue();
         userDao.create(new User("name", "mail@mail.ru", 12));
@@ -192,6 +254,39 @@ class UserDaoImplTest {
         assertThat(userDao.mailUniqueCheck("newmail@mail.ru")).isTrue();
     }
 
+    @Test
+    void mailUniqueHibernateException() {
+        try (var s = sessionFactory.openSession()) {
+            s.beginTransaction();
+            s.createNativeMutationQuery("DROP INDEX IF EXISTS users_email_ci_uidx").executeUpdate();
+            s.createNativeMutationQuery(
+                    "ALTER TABLE users ALTER COLUMN email TYPE uuid USING email::uuid"
+            ).executeUpdate();
+            s.getTransaction().commit();
+        }
+
+        try {
+            assertThrows(HibernateException.class,
+                    () -> userDao.mailUniqueCheck("mail@mail.ru"));
+        } finally {
+            try (var s = sessionFactory.openSession()) {
+                s.beginTransaction();
+                s.createNativeMutationQuery(
+                        "ALTER TABLE users ALTER COLUMN email TYPE varchar(254) USING email::text"
+                ).executeUpdate();
+                s.createNativeMutationQuery(
+                        "ALTER TABLE users ALTER COLUMN email SET NOT NULL"
+                ).executeUpdate();
+                s.createNativeMutationQuery(
+                        "DROP INDEX IF EXISTS users_email_ci_uidx"
+                ).executeUpdate();
+                s.createNativeMutationQuery(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS users_email_ci_uidx ON users (lower(email))"
+                ).executeUpdate();
+                s.getTransaction().commit();
+            }
+        }
+    }
 
     private SessionFactory buildSessionFactory() {
         Configuration configuration = new Configuration();
